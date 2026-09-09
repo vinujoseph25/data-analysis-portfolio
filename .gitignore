@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data files
+projects/black-friday-sales-prediction/data/*.csv
+*.parquet
+
+# Generated outputs
+outputs/
+*.log
+.DS_Store
