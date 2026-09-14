@@ -55,6 +55,13 @@ def build_preprocessor(X):
     )
 
 
+def build_model_pipeline(X, estimator):
+    """Create a preprocessing + estimator pipeline for consistent model training."""
+    return Pipeline(
+        [("preprocessor", build_preprocessor(X)), ("model", estimator)]
+    )
+
+
 def metrics(y_true, y_pred):
     mse = mean_squared_error(y_true, y_pred)
     return {
@@ -91,17 +98,12 @@ def main():
     }
 
     results = []
-    fitted_models = {}
 
     for name, estimator in models.items():
-        pipeline = Pipeline(
-            [("preprocessor", build_preprocessor(X_train)), ("model", estimator)]
-        )
+        pipeline = build_model_pipeline(X_train, estimator)
         pipeline.fit(X_train, y_train)
         prediction = pipeline.predict(X_valid)
-        result = {"Model": name, **metrics(y_valid, prediction)}
-        results.append(result)
-        fitted_models[name] = pipeline
+        results.append({"Model": name, **metrics(y_valid, prediction)})
 
     results_df = pd.DataFrame(results).sort_values("RMSE")
     OUTPUT_DIR.mkdir(exist_ok=True)
@@ -111,9 +113,7 @@ def main():
     # Refit each model on all labelled data and create test predictions.
     prediction_columns = {"User_ID": test["User_ID"], "Product_ID": test["Product_ID"]}
     for name, estimator in models.items():
-        pipeline = Pipeline(
-            [("preprocessor", build_preprocessor(X)), ("model", estimator)]
-        )
+        pipeline = build_model_pipeline(X, estimator)
         pipeline.fit(X, y)
         prediction_columns[name] = pipeline.predict(X_test)
 
