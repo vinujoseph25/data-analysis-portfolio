@@ -21,12 +21,30 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 OUTPUT_DIR = ROOT / "outputs"
 RANDOM_STATE = 42
+TARGET = "Purchase"
+ID_COLUMNS = ["User_ID", "Product_ID"]
+REQUIRED_COLUMNS = ID_COLUMNS + [TARGET]
 
 
 def load_data():
     train = pd.read_csv(DATA_DIR / "train.csv")
     test = pd.read_csv(DATA_DIR / "test.csv")
     return train, test
+
+
+def validate_input_schema(train, test):
+    """Validate the minimum schema required by the training workflow."""
+    missing_train = [column for column in REQUIRED_COLUMNS if column not in train.columns]
+    missing_test = [column for column in ID_COLUMNS if column not in test.columns]
+
+    if missing_train:
+        raise ValueError(f"Training data is missing required columns: {missing_train}")
+    if missing_test:
+        raise ValueError(f"Test data is missing required columns: {missing_test}")
+    if train.empty:
+        raise ValueError("Training data must contain at least one row")
+    if test.empty:
+        raise ValueError("Test data must contain at least one row")
 
 
 def build_preprocessor(X):
@@ -74,12 +92,11 @@ def metrics(y_true, y_pred):
 
 def main():
     train, test = load_data()
+    validate_input_schema(train, test)
 
-    target = "Purchase"
-    drop_columns = ["User_ID", "Product_ID"]
-    X = train.drop(columns=[target] + drop_columns)
-    y = train[target]
-    X_test = test.drop(columns=drop_columns)
+    X = train.drop(columns=REQUIRED_COLUMNS)
+    y = train[TARGET]
+    X_test = test.drop(columns=ID_COLUMNS)
 
     X_train, X_valid, y_train, y_valid = train_test_split(
         X, y, test_size=0.20, random_state=RANDOM_STATE
