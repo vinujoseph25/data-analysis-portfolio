@@ -5,10 +5,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from sklearn.linear_model import Ridge
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from model_comparison import build_preprocessor, metrics  # noqa: E402
+from model_comparison import build_model_pipeline, build_preprocessor, metrics  # noqa: E402
 
 
 def test_metrics_returns_expected_regression_values():
@@ -38,4 +39,25 @@ def test_preprocessor_handles_numeric_and_categorical_missing_values():
 
     assert transformed.shape[0] == len(X)
     assert transformed.shape[1] > 0
-    assert np.isfinite(transformed.toarray() if hasattr(transformed, "toarray") else transformed).all()
+    assert np.isfinite(
+        transformed.toarray() if hasattr(transformed, "toarray") else transformed
+    ).all()
+
+
+def test_model_pipeline_fits_and_predicts_with_mixed_features():
+    frame = pd.DataFrame(
+        {
+            "Age": ["18-25", "26-35", "36-45", "26-35"],
+            "Occupation": [1, 2, 1, 3],
+            "Purchase": [1000, 2000, 1500, 2200],
+        }
+    )
+    X = frame.drop(columns=["Purchase"])
+    y = frame["Purchase"]
+
+    pipeline = build_model_pipeline(X, Ridge(alpha=1.0))
+    pipeline.fit(X, y)
+    predictions = pipeline.predict(X)
+
+    assert predictions.shape == (len(X),)
+    assert np.isfinite(predictions).all()
