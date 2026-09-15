@@ -5,11 +5,17 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 from sklearn.linear_model import Ridge
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from model_comparison import build_model_pipeline, build_preprocessor, metrics  # noqa: E402
+from model_comparison import (  # noqa: E402
+    build_model_pipeline,
+    build_preprocessor,
+    metrics,
+    validate_input_schema,
+)
 
 
 def test_metrics_returns_expected_regression_values():
@@ -84,3 +90,42 @@ def test_model_pipeline_handles_unseen_categories_at_prediction_time():
 
     assert predictions.shape == (1,)
     assert np.isfinite(predictions).all()
+
+
+def test_input_schema_accepts_required_columns():
+    train = pd.DataFrame(
+        {
+            "User_ID": [1],
+            "Product_ID": ["P1"],
+            "Purchase": [1000],
+            "Age": ["18-25"],
+        }
+    )
+    test = train.drop(columns=["Purchase"])
+
+    validate_input_schema(train, test)
+
+
+@pytest.mark.parametrize(
+    "train_columns,test_columns,error_text",
+    [
+        (["User_ID", "Purchase"], ["User_ID", "Product_ID"], "Training"),
+        (["User_ID", "Product_ID", "Purchase"], ["User_ID"], "Test"),
+    ],
+)
+def test_input_schema_reports_missing_required_columns(
+    train_columns, test_columns, error_text
+):
+    train = pd.DataFrame({column: [1] for column in train_columns})
+    test = pd.DataFrame({column: [1] for column in test_columns})
+
+    with pytest.raises(ValueError, match=error_text):
+        validate_input_schema(train, test)
+
+
+def test_input_schema_rejects_empty_data():
+    train = pd.DataFrame(columns=["User_ID", "Product_ID", "Purchase"])
+    test = pd.DataFrame(columns=["User_ID", "Product_ID"])
+
+    with pytest.raises(ValueError, match="at least one row"):
+        validate_input_schema(train, test)
