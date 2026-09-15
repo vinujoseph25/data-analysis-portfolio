@@ -61,3 +61,26 @@ def test_model_pipeline_fits_and_predicts_with_mixed_features():
 
     assert predictions.shape == (len(X),)
     assert np.isfinite(predictions).all()
+
+
+def test_model_pipeline_handles_unseen_categories_at_prediction_time():
+    train = pd.DataFrame(
+        {
+            "Age": ["18-25", "26-35", "36-45"],
+            "City_Category": ["A", "B", "A"],
+        }
+    )
+    y = pd.Series([1000.0, 2000.0, 1500.0])
+    new_data = pd.DataFrame(
+        {
+            "Age": ["46-50"],
+            "City_Category": ["C"],
+        }
+    )
+
+    pipeline = build_model_pipeline(train, Ridge(alpha=1.0))
+    pipeline.fit(train, y)
+    predictions = pipeline.predict(new_data)
+
+    assert predictions.shape == (1,)
+    assert np.isfinite(predictions).all()
