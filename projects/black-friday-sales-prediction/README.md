@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project analyses customer purchasing behaviour during Black Friday and builds a **multivariable linear regression** model to predict the `Purchase` amount.
+This project analyses customer purchasing behaviour during Black Friday and compares multiple regression approaches to predict the `Purchase` amount.
 
 The analysis uses the original Black Friday `train.csv` and `test.csv` supplied for the project. No synthetic records are created.
 
@@ -23,16 +23,16 @@ The raw CSV files are intentionally excluded from this public repository. See `d
 2. Check data types, missing values and basic purchase distributions.
 3. Remove `User_ID` and `Product_ID` from the predictive feature set because they are identifiers.
 4. Treat demographic and product-category fields as categorical variables.
-5. Preserve missing values in `Product_Category_2` and `Product_Category_3` using an explicit `Missing` category rather than deleting observations.
-6. One-hot encode categorical variables with a reference category removed.
+5. Handle missing values through preprocessing pipelines so imputation is learned from the training data only.
+6. Standardise numeric features and one-hot encode categorical features with unknown-category handling.
 7. Split the labelled training data 80/20 using `random_state=42`.
-8. Train `sklearn.linear_model.LinearRegression`.
-9. Evaluate using R², adjusted R², MAE, MSE and RMSE.
-10. Refit the model on all labelled training data and generate predictions for the original 233,599-row test set.
+8. Compare `LinearRegression`, `Ridge` and `RandomForestRegressor` using the same preprocessing architecture.
+9. Evaluate using R², MAE, MSE and RMSE.
+10. Refit each candidate model on all labelled training data and generate predictions for the original test set.
 
 ## Validation results
 
-The validated baseline produced the following results on the 20% hold-out set:
+The original validated baseline produced the following results on the 20% hold-out set:
 
 | Metric | Result |
 |---|---:|
@@ -43,7 +43,7 @@ The validated baseline produced the following results on the 20% hold-out set:
 | RMSE | **2,999.13** |
 | Encoded predictors | **85** |
 
-The R² of approximately 0.642 means the model explains about 64% of the variation in held-out purchase values under this feature representation.
+The R² of approximately 0.642 means the baseline model explains about 64% of the variation in held-out purchase values under that feature representation. The model-comparison workflow now provides a reusable foundation for benchmarking stronger estimators without duplicating preprocessing logic.
 
 ## Repository contents
 
@@ -56,7 +56,10 @@ black-friday-sales-prediction/
 │   └── black_friday_sales_prediction.ipynb
 ├── src/
 │   ├── README.md
-│   └── train_model.py
+│   ├── train_model.py
+│   └── model_comparison.py
+├── tests/
+│   └── test_model_comparison.py
 ├── outputs/
 │   └── (generated locally; ignored by Git)
 └── requirements.txt
@@ -72,21 +75,34 @@ data/
 └── test.csv
 ```
 
-Then run the notebook or:
+For the baseline notebook/script workflow, run:
 
 ```bash
 python src/train_model.py
 ```
 
-The script writes `outputs/black_friday_test_predictions.csv` locally. The generated prediction file is excluded from Git so the public repository remains lightweight.
+For model comparison:
+
+```bash
+python src/model_comparison.py
+```
+
+Run the automated unit tests with:
+
+```bash
+pytest tests
+```
+
+The scripts write generated prediction/model-comparison outputs locally. These generated files are excluded from Git so the public repository remains lightweight.
 
 ## Future improvements
 
 - Residual and assumption diagnostics
-- Cross-validation
-- Regularised regression (Ridge/Lasso)
-- Comparison with tree-based regression models
-- Hyperparameter tuning and model comparison
+- Cross-validation and confidence intervals
+- Lasso and elastic-net regularisation
+- Feature importance and model interpretability
+- Hyperparameter tuning with a reproducible validation strategy
+- Experiment tracking and model versioning
 
 ## Disclaimer
 
