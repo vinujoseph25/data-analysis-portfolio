@@ -33,7 +33,7 @@ def load_data():
 
 
 def validate_input_schema(train, test):
-    """Validate the minimum schema required by the training workflow."""
+    """Validate the minimum schema and feature compatibility for the workflow."""
     missing_train = [column for column in REQUIRED_COLUMNS if column not in train.columns]
     missing_test = [column for column in ID_COLUMNS if column not in test.columns]
 
@@ -45,6 +45,18 @@ def validate_input_schema(train, test):
         raise ValueError("Training data must contain at least one row")
     if test.empty:
         raise ValueError("Test data must contain at least one row")
+    if not pd.api.types.is_numeric_dtype(train[TARGET]):
+        raise ValueError(f"Training target '{TARGET}' must be numeric")
+
+    train_features = set(train.columns) - set(REQUIRED_COLUMNS)
+    test_features = set(test.columns) - set(ID_COLUMNS)
+    if train_features != test_features:
+        missing_in_test = sorted(train_features - test_features)
+        extra_in_test = sorted(test_features - train_features)
+        raise ValueError(
+            "Training and test features do not match: "
+            f"missing_in_test={missing_in_test}, extra_in_test={extra_in_test}"
+        )
 
 
 def build_preprocessor(X):
