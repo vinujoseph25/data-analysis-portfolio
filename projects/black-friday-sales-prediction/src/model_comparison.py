@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
+from sklearn.dummy import DummyRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression, Ridge
@@ -115,6 +116,8 @@ def main():
     )
 
     models = {
+        # Mean prediction provides a simple reference point for judging ML value.
+        "DummyMean": DummyRegressor(strategy="mean"),
         "LinearRegression": LinearRegression(),
         "Ridge": Ridge(alpha=1.0),
         "RandomForest": RandomForestRegressor(
