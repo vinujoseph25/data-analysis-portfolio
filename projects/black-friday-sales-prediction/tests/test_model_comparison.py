@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
+from sklearn.dummy import DummyRegressor
 from sklearn.linear_model import Ridge
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -90,6 +91,22 @@ def test_model_pipeline_handles_unseen_categories_at_prediction_time():
 
     assert predictions.shape == (1,)
     assert np.isfinite(predictions).all()
+
+
+def test_dummy_baseline_produces_constant_mean_prediction():
+    train = pd.DataFrame(
+        {
+            "Age": ["18-25", "26-35", "36-45"],
+            "Occupation": [1, 2, 3],
+        }
+    )
+    y = pd.Series([1000.0, 2000.0, 3000.0])
+
+    pipeline = build_model_pipeline(train, DummyRegressor(strategy="mean"))
+    pipeline.fit(train, y)
+    predictions = pipeline.predict(train)
+
+    assert np.allclose(predictions, y.mean())
 
 
 def test_input_schema_accepts_required_columns():
