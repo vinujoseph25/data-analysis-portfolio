@@ -129,3 +129,40 @@ def test_input_schema_rejects_empty_data():
 
     with pytest.raises(ValueError, match="at least one row"):
         validate_input_schema(train, test)
+
+
+def test_input_schema_rejects_non_numeric_target():
+    train = pd.DataFrame(
+        {
+            "User_ID": [1],
+            "Product_ID": ["P1"],
+            "Purchase": ["not-a-number"],
+            "Age": ["18-25"],
+        }
+    )
+    test = train.drop(columns=["Purchase"])
+
+    with pytest.raises(ValueError, match="must be numeric"):
+        validate_input_schema(train, test)
+
+
+def test_input_schema_rejects_mismatched_features():
+    train = pd.DataFrame(
+        {
+            "User_ID": [1],
+            "Product_ID": ["P1"],
+            "Purchase": [1000],
+            "Age": ["18-25"],
+            "Gender": ["F"],
+        }
+    )
+    test = pd.DataFrame(
+        {
+            "User_ID": [2],
+            "Product_ID": ["P2"],
+            "Age": ["26-35"],
+        }
+    )
+
+    with pytest.raises(ValueError, match="features do not match"):
+        validate_input_schema(train, test)
