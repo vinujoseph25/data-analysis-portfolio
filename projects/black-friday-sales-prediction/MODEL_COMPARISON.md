@@ -6,6 +6,7 @@ The baseline project establishes a multivariable linear regression model. This e
 
 | Model | Why it is included |
 | --- | --- |
+| Dummy Regressor | Establishes a naive mean-prediction benchmark so model lift can be quantified |
 | Linear Regression | Interpretable baseline and reference point |
 | Ridge Regression | Tests whether L2 regularisation improves stability with many encoded predictors |
 | Random Forest Regressor | Tests a non-linear ensemble against the linear assumptions |
@@ -28,11 +29,11 @@ outputs/
 └── model_predictions.csv
 ```
 
-`model_comparison.csv` contains R², MAE, MSE and RMSE for the validation set. `model_predictions.csv` contains predictions from each fitted model for the original test dataset.
+`model_comparison.csv` contains R², MAE, MSE and RMSE for the validation set. `model_predictions.csv` contains predictions from each fitted model for the original test dataset. The `Dummy Regressor` provides a naive mean-prediction benchmark, making it possible to distinguish genuine predictive value from simply reproducing the target's central tendency.
 
 ## Why this matters
 
-The comparison moves the project beyond a single-model exercise toward a reproducible **model selection workflow**. The appropriate model should be selected from validation evidence, interpretability requirements, computational cost and business context rather than from algorithm complexity alone.
+The comparison moves the project beyond a single-model exercise toward a reproducible **model selection workflow**. The appropriate model should be selected from validation evidence, interpretability requirements, computational cost and business context rather than from algorithm complexity alone. Keeping a naive baseline is an important part of that evaluation: a complex model should demonstrate measurable improvement over a simple reference strategy.
 
 ## Next analysis steps
 
