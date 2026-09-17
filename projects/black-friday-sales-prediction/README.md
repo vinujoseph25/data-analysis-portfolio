@@ -25,10 +25,11 @@ The raw CSV files are intentionally excluded from this public repository. See `d
 4. Treat demographic and product-category fields as categorical variables.
 5. Handle missing values through preprocessing pipelines so imputation is learned from the training data only.
 6. Standardise numeric features and one-hot encode categorical features with unknown-category handling.
-7. Split the labelled training data 80/20 using `random_state=42`.
-8. Compare `LinearRegression`, `Ridge` and `RandomForestRegressor` using the same preprocessing architecture.
-9. Evaluate using R², MAE, MSE and RMSE.
-10. Refit each candidate model on all labelled training data and generate predictions for the original test set.
+7. Validate required identifiers, target type, non-empty inputs and train/test feature compatibility before modelling.
+8. Split the labelled training data 80/20 using `random_state=42`.
+9. Compare `LinearRegression`, `Ridge` and `RandomForestRegressor` using the same preprocessing architecture.
+10. Evaluate using R², MAE, MSE and RMSE.
+11. Refit each candidate model on all labelled training data and generate predictions for the original test set.
 
 ## Validation results
 
@@ -94,6 +95,10 @@ pytest tests
 ```
 
 The scripts write generated prediction/model-comparison outputs locally. These generated files are excluded from Git so the public repository remains lightweight.
+
+## Quality checks
+
+The model-comparison workflow includes unit tests for metric calculations, preprocessing, model fitting, unseen categories, input schema validation, target validation and train/test feature compatibility. GitHub Actions runs the test suite across supported Python versions.
 
 ## Future improvements
 
