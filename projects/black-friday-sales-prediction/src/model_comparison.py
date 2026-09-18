@@ -35,6 +35,11 @@ def load_data():
 
 def validate_input_schema(train, test):
     """Validate the minimum schema and feature compatibility for the workflow."""
+    for name, frame in (("Training", train), ("Test", test)):
+        if not frame.columns.is_unique:
+            duplicates = frame.columns[frame.columns.duplicated()].tolist()
+            raise ValueError(f"{name} data contains duplicate columns: {duplicates}")
+
     missing_train = [column for column in REQUIRED_COLUMNS if column not in train.columns]
     missing_test = [column for column in ID_COLUMNS if column not in test.columns]
 
@@ -116,7 +121,6 @@ def main():
     )
 
     models = {
-        # Mean prediction provides a simple reference point for judging ML value.
         "DummyMean": DummyRegressor(strategy="mean"),
         "LinearRegression": LinearRegression(),
         "Ridge": Ridge(alpha=1.0),
@@ -142,7 +146,6 @@ def main():
     results_df.to_csv(OUTPUT_DIR / "model_comparison.csv", index=False)
     print(results_df.to_string(index=False))
 
-    # Refit each model on all labelled data and create test predictions.
     prediction_columns = {"User_ID": test["User_ID"], "Product_ID": test["Product_ID"]}
     for name, estimator in models.items():
         pipeline = build_model_pipeline(X, estimator)
