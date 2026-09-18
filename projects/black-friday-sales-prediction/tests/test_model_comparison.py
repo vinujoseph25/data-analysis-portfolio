@@ -183,3 +183,14 @@ def test_input_schema_rejects_mismatched_features():
 
     with pytest.raises(ValueError, match="features do not match"):
         validate_input_schema(train, test)
+
+
+def test_input_schema_rejects_duplicate_columns():
+    train = pd.DataFrame([[1, "P1", 1000, "18-25"]], columns=["User_ID", "Product_ID", "Purchase", "Age"])
+    train.columns = ["User_ID", "Product_ID", "Purchase", "Age"]
+    test = train.drop(columns=["Purchase"])
+    train.insert(4, "Age_duplicate", train["Age"])
+    train.columns = ["User_ID", "Product_ID", "Purchase", "Age", "Age"]
+
+    with pytest.raises(ValueError, match="duplicate columns"):
+        validate_input_schema(train, test)
