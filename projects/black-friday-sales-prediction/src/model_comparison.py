@@ -17,7 +17,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 OUTPUT_DIR = ROOT / "outputs"
@@ -42,7 +41,6 @@ def validate_input_schema(train, test):
 
     missing_train = [column for column in REQUIRED_COLUMNS if column not in train.columns]
     missing_test = [column for column in ID_COLUMNS if column not in test.columns]
-
     if missing_train:
         raise ValueError(f"Training data is missing required columns: {missing_train}")
     if missing_test:
@@ -68,12 +66,8 @@ def validate_input_schema(train, test):
 def build_preprocessor(X):
     categorical = X.select_dtypes(include=["object", "category"]).columns.tolist()
     numeric = X.select_dtypes(include=[np.number]).columns.tolist()
-
     numeric_pipeline = Pipeline(
-        [
-            ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler()),
-        ]
+        [("imputer", SimpleImputer(strategy="median")), ("scaler", StandardScaler())]
     )
     categorical_pipeline = Pipeline(
         [
@@ -81,67 +75,56 @@ def build_preprocessor(X):
             ("onehot", OneHotEncoder(handle_unknown="ignore")),
         ]
     )
-
     return ColumnTransformer(
-        [
-            ("numeric", numeric_pipeline, numeric),
-            ("categorical", categorical_pipeline, categorical),
-        ],
+        [("numeric", numeric_pipeline, numeric), ("categorical", categorical_pipeline, categorical)],
         remainder="drop",
     )
 
 
 def build_model_pipeline(X, estimator):
     """Create a preprocessing + estimator pipeline for consistent model training."""
-    return Pipeline(
-        [("preprocessor", build_preprocessor(X)), ("model", estimator)]
-    )
+    return Pipeline([("preprocessor", build_preprocessor(X)), ("model", estimator)])
 
 
 def metrics(y_true, y_pred):
     mse = mean_squared_error(y_true, y_pred)
-    return {
-        "R2": r2_score(y_true, y_pred),
-        "MAE": mean_absolute_error(y_true, y_pred),
-        "MSE": mse,
-        "RMSE": np.sqrt(mse),
-    }
+    return {"R2": r2_score(y_true, y_pred), "MAE": mean_absolute_error(y_true, y_pred), "MSE": mse, "RMSE": np.sqrt(mse)}
+
+
+def add_baseline_lift(results_df):
+    """Add model improvement metrics relative to the naive mean baseline."""
+    baseline = results_df.loc[results_df["Model"] == "DummyMean"]
+    if baseline.empty:
+        raise ValueError("Model comparison requires a DummyMean baseline")
+    baseline_rmse = baseline["RMSE"].iloc[0]
+    baseline_r2 = baseline["R2"].iloc[0]
+    results = results_df.copy()
+    results["RMSE_Improvement_vs_Dummy"] = baseline_rmse - results["RMSE"]
+    results["R2_Improvement_vs_Dummy"] = results["R2"] - baseline_r2
+    return results
 
 
 def main():
     train, test = load_data()
     validate_input_schema(train, test)
-
     X = train.drop(columns=REQUIRED_COLUMNS)
     y = train[TARGET]
     X_test = test.drop(columns=ID_COLUMNS)
-
-    X_train, X_valid, y_train, y_valid = train_test_split(
-        X, y, test_size=0.20, random_state=RANDOM_STATE
-    )
+    X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.20, random_state=RANDOM_STATE)
 
     models = {
         "DummyMean": DummyRegressor(strategy="mean"),
         "LinearRegression": LinearRegression(),
         "Ridge": Ridge(alpha=1.0),
-        "RandomForest": RandomForestRegressor(
-            n_estimators=150,
-            max_depth=18,
-            min_samples_leaf=2,
-            n_jobs=-1,
-            random_state=RANDOM_STATE,
-        ),
+        "RandomForest": RandomForestRegressor(n_estimators=150, max_depth=18, min_samples_leaf=2, n_jobs=-1, random_state=RANDOM_STATE),
     }
-
     results = []
-
     for name, estimator in models.items():
         pipeline = build_model_pipeline(X_train, estimator)
         pipeline.fit(X_train, y_train)
-        prediction = pipeline.predict(X_valid)
-        results.append({"Model": name, **metrics(y_valid, prediction)})
+        results.append({"Model": name, **metrics(y_valid, pipeline.predict(X_valid))})
 
-    results_df = pd.DataFrame(results).sort_values("RMSE")
+    results_df = add_baseline_lift(pd.DataFrame(results).sort_values("RMSE"))
     OUTPUT_DIR.mkdir(exist_ok=True)
     results_df.to_csv(OUTPUT_DIR / "model_comparison.csv", index=False)
     print(results_df.to_string(index=False))
@@ -151,10 +134,7 @@ def main():
         pipeline = build_model_pipeline(X, estimator)
         pipeline.fit(X, y)
         prediction_columns[name] = pipeline.predict(X_test)
-
-    pd.DataFrame(prediction_columns).to_csv(
-        OUTPUT_DIR / "model_predictions.csv", index=False
-    )
+    pd.DataFrame(prediction_columns).to_csv(OUTPUT_DIR / "model_predictions.csv", index=False)
 
 
 if __name__ == "__main__":
