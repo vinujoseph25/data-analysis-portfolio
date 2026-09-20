@@ -3,6 +3,7 @@
 Run from the project directory after placing train.csv and test.csv in data/.
 """
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -21,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 OUTPUT_DIR = ROOT / "outputs"
 RANDOM_STATE = 42
+VALIDATION_SIZE = 0.20
 TARGET = "Purchase"
 ID_COLUMNS = ["User_ID", "Product_ID"]
 REQUIRED_COLUMNS = ID_COLUMNS + [TARGET]
@@ -114,13 +116,30 @@ def select_best_model(results_df, exclude_models=("DummyMean",)):
     return candidates.sort_values(["RMSE", "MAE", "Model"], ascending=[True, True, True]).iloc[0]["Model"]
 
 
+def build_run_metadata(results_df, best_model):
+    """Build a machine-readable summary of the model-selection run."""
+    selected = results_df.loc[results_df["Model"] == best_model].iloc[0]
+    return {
+        "target": TARGET,
+        "selected_model": best_model,
+        "random_state": RANDOM_STATE,
+        "validation_size": VALIDATION_SIZE,
+        "selected_metrics": {
+            "R2": float(selected["R2"]),
+            "MAE": float(selected["MAE"]),
+            "MSE": float(selected["MSE"]),
+            "RMSE": float(selected["RMSE"]),
+        },
+    }
+
+
 def main():
     train, test = load_data()
     validate_input_schema(train, test)
     X = train.drop(columns=REQUIRED_COLUMNS)
     y = train[TARGET]
     X_test = test.drop(columns=ID_COLUMNS)
-    X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.20, random_state=RANDOM_STATE)
+    X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=VALIDATION_SIZE, random_state=RANDOM_STATE)
 
     models = {
         "DummyMean": DummyRegressor(strategy="mean"),
@@ -139,6 +158,8 @@ def main():
     results_df["Selected"] = results_df["Model"].eq(best_model)
     OUTPUT_DIR.mkdir(exist_ok=True)
     results_df.to_csv(OUTPUT_DIR / "model_comparison.csv", index=False)
+    with (OUTPUT_DIR / "model_run_metadata.json").open("w", encoding="utf-8") as file:
+        json.dump(build_run_metadata(results_df, best_model), file, indent=2)
     print(results_df.to_string(index=False))
     print(f"Selected model: {best_model}")
 
