@@ -15,6 +15,7 @@ from model_comparison import (  # noqa: E402
     add_baseline_lift,
     build_model_pipeline,
     build_preprocessor,
+    build_run_metadata,
     metrics,
     select_best_model,
     validate_input_schema,
@@ -93,6 +94,18 @@ def test_select_best_model_raises_when_only_baseline_exists():
     results = pd.DataFrame({"Model": ["DummyMean"], "R2": [0.0], "MAE": [100.0], "RMSE": [120.0]})
     with pytest.raises(ValueError, match="No predictive models"):
         select_best_model(results)
+
+
+def test_build_run_metadata_contains_reproducibility_and_selected_metrics():
+    results = pd.DataFrame(
+        {"Model": ["Ridge"], "R2": [0.25], "MAE": [70.0], "MSE": [5625.0], "RMSE": [75.0]}
+    )
+    metadata = build_run_metadata(results, "Ridge")
+    assert metadata["target"] == "Purchase"
+    assert metadata["selected_model"] == "Ridge"
+    assert metadata["random_state"] == 42
+    assert metadata["validation_size"] == 0.20
+    assert metadata["selected_metrics"]["RMSE"] == 75.0
 
 
 def test_input_schema_accepts_required_columns():
