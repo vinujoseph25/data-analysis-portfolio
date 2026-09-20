@@ -16,6 +16,7 @@ from model_comparison import (  # noqa: E402
     build_model_pipeline,
     build_preprocessor,
     metrics,
+    select_best_model,
     validate_input_schema,
 )
 
@@ -74,6 +75,24 @@ def test_baseline_lift_requires_dummy_baseline():
     results = pd.DataFrame({"Model": ["Ridge"], "R2": [0.25], "RMSE": [75.0]})
     with pytest.raises(ValueError, match="DummyMean baseline"):
         add_baseline_lift(results)
+
+
+def test_select_best_model_uses_validation_rmse_and_ignores_dummy():
+    results = pd.DataFrame(
+        {
+            "Model": ["DummyMean", "Ridge", "RandomForest"],
+            "R2": [0.0, 0.25, 0.30],
+            "MAE": [100.0, 70.0, 65.0],
+            "RMSE": [120.0, 80.0, 75.0],
+        }
+    )
+    assert select_best_model(results) == "RandomForest"
+
+
+def test_select_best_model_raises_when_only_baseline_exists():
+    results = pd.DataFrame({"Model": ["DummyMean"], "R2": [0.0], "MAE": [100.0], "RMSE": [120.0]})
+    with pytest.raises(ValueError, match="No predictive models"):
+        select_best_model(results)
 
 
 def test_input_schema_accepts_required_columns():
