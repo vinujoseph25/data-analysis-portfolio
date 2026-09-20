@@ -124,6 +124,12 @@ def test_input_schema_rejects_non_numeric_target():
         validate_input_schema(train, train.drop(columns=["Purchase"]))
 
 
+def test_input_schema_rejects_missing_target_values():
+    train = pd.DataFrame({"User_ID": [1, 2], "Product_ID": ["P1", "P2"], "Purchase": [1000.0, np.nan], "Age": ["18-25", "26-35"]})
+    with pytest.raises(ValueError, match="must not contain missing values"):
+        validate_input_schema(train, train.drop(columns=["Purchase"]))
+
+
 def test_input_schema_rejects_mismatched_features():
     train = pd.DataFrame({"User_ID": [1], "Product_ID": ["P1"], "Purchase": [1000], "Age": ["18-25"], "Gender": ["F"]})
     test = pd.DataFrame({"User_ID": [2], "Product_ID": ["P2"], "Age": ["26-35"]})
