@@ -104,6 +104,14 @@ def add_baseline_lift(results_df):
     return results
 
 
+def select_best_model(results_df, exclude_models=("DummyMean",)):
+    """Select the best predictive model by lowest validation RMSE."""
+    candidates = results_df[~results_df["Model"].isin(exclude_models)]
+    if candidates.empty:
+        raise ValueError("No predictive models are available for selection")
+    return candidates.sort_values(["RMSE", "MAE", "Model"], ascending=[True, True, True]).iloc[0]["Model"]
+
+
 def main():
     train, test = load_data()
     validate_input_schema(train, test)
@@ -125,9 +133,12 @@ def main():
         results.append({"Model": name, **metrics(y_valid, pipeline.predict(X_valid))})
 
     results_df = add_baseline_lift(pd.DataFrame(results).sort_values("RMSE"))
+    best_model = select_best_model(results_df)
+    results_df["Selected"] = results_df["Model"].eq(best_model)
     OUTPUT_DIR.mkdir(exist_ok=True)
     results_df.to_csv(OUTPUT_DIR / "model_comparison.csv", index=False)
     print(results_df.to_string(index=False))
+    print(f"Selected model: {best_model}")
 
     prediction_columns = {"User_ID": test["User_ID"], "Product_ID": test["Product_ID"]}
     for name, estimator in models.items():
