@@ -51,6 +51,8 @@ def validate_input_schema(train, test):
         raise ValueError("Test data must contain at least one row")
     if not pd.api.types.is_numeric_dtype(train[TARGET]):
         raise ValueError(f"Training target '{TARGET}' must be numeric")
+    if train[TARGET].isna().any():
+        raise ValueError(f"Training target '{TARGET}' must not contain missing values")
 
     train_features = set(train.columns) - set(REQUIRED_COLUMNS)
     test_features = set(test.columns) - set(ID_COLUMNS)
