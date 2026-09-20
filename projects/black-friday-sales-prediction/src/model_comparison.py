@@ -147,7 +147,14 @@ def main():
         pipeline = build_model_pipeline(X, estimator)
         pipeline.fit(X, y)
         prediction_columns[name] = pipeline.predict(X_test)
-    pd.DataFrame(prediction_columns).to_csv(OUTPUT_DIR / "model_predictions.csv", index=False)
+
+    predictions_df = pd.DataFrame(prediction_columns)
+    predictions_df["SelectedModel"] = best_model
+    predictions_df["SelectedPrediction"] = predictions_df[best_model]
+    predictions_df.to_csv(OUTPUT_DIR / "model_predictions.csv", index=False)
+    predictions_df[["User_ID", "Product_ID", "SelectedPrediction"]].to_csv(
+        OUTPUT_DIR / "selected_model_predictions.csv", index=False
+    )
 
 
 if __name__ == "__main__":
