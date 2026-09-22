@@ -122,6 +122,8 @@ def build_run_metadata(results_df, best_model):
     return {
         "target": TARGET,
         "selected_model": best_model,
+        "candidate_models": results_df["Model"].tolist(),
+        "baseline_model": "DummyMean",
         "random_state": RANDOM_STATE,
         "validation_size": VALIDATION_SIZE,
         "selected_metrics": {
@@ -131,6 +133,18 @@ def build_run_metadata(results_df, best_model):
             "RMSE": float(selected["RMSE"]),
         },
     }
+
+
+def build_selected_prediction_frame(predictions_df, best_model):
+    """Return stable identifiers plus the prediction from the selected model."""
+    if best_model not in predictions_df.columns:
+        raise ValueError(f"Selected model '{best_model}' is missing from predictions")
+    required = ["User_ID", "Product_ID", best_model]
+    missing = [column for column in required if column not in predictions_df.columns]
+    if missing:
+        raise ValueError(f"Prediction data is missing required columns: {missing}")
+    selected = predictions_df[["User_ID", "Product_ID", best_model]].copy()
+    return selected.rename(columns={best_model: "SelectedPrediction"})
 
 
 def main():
@@ -173,7 +187,7 @@ def main():
     predictions_df["SelectedModel"] = best_model
     predictions_df["SelectedPrediction"] = predictions_df[best_model]
     predictions_df.to_csv(OUTPUT_DIR / "model_predictions.csv", index=False)
-    predictions_df[["User_ID", "Product_ID", "SelectedPrediction"]].to_csv(
+    build_selected_prediction_frame(predictions_df, best_model).to_csv(
         OUTPUT_DIR / "selected_model_predictions.csv", index=False
     )
 
