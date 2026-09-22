@@ -147,6 +147,29 @@ def build_selected_prediction_frame(predictions_df, best_model):
     return selected.rename(columns={best_model: "SelectedPrediction"})
 
 
+def validate_prediction_output(test, predictions_df, best_model):
+    """Validate prediction row count, identifiers, and selected predictions before export."""
+    required = ["User_ID", "Product_ID", "SelectedModel", "SelectedPrediction"]
+    missing = [column for column in required if column not in predictions_df.columns]
+    if missing:
+        raise ValueError(f"Prediction output is missing required columns: {missing}")
+    if len(predictions_df) != len(test):
+        raise ValueError(
+            "Prediction row count does not match test data: "
+            f"predictions={len(predictions_df)}, test={len(test)}"
+        )
+    if not predictions_df[["User_ID", "Product_ID"]].reset_index(drop=True).equals(
+        test[["User_ID", "Product_ID"]].reset_index(drop=True)
+    ):
+        raise ValueError("Prediction identifiers do not match test identifiers")
+    if predictions_df["SelectedModel"].nunique() != 1 or predictions_df["SelectedModel"].iloc[0] != best_model:
+        raise ValueError("Prediction output contains an inconsistent selected model")
+    if not pd.api.types.is_numeric_dtype(predictions_df["SelectedPrediction"]):
+        raise ValueError("Selected predictions must be numeric")
+    if not np.isfinite(predictions_df["SelectedPrediction"].to_numpy()).all():
+        raise ValueError("Selected predictions must contain only finite values")
+
+
 def main():
     train, test = load_data()
     validate_input_schema(train, test)
@@ -186,6 +209,7 @@ def main():
     predictions_df = pd.DataFrame(prediction_columns)
     predictions_df["SelectedModel"] = best_model
     predictions_df["SelectedPrediction"] = predictions_df[best_model]
+    validate_prediction_output(test, predictions_df, best_model)
     predictions_df.to_csv(OUTPUT_DIR / "model_predictions.csv", index=False)
     build_selected_prediction_frame(predictions_df, best_model).to_csv(
         OUTPUT_DIR / "selected_model_predictions.csv", index=False
