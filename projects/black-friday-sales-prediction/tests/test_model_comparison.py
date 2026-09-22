@@ -16,6 +16,7 @@ from model_comparison import (  # noqa: E402
     build_model_pipeline,
     build_preprocessor,
     build_run_metadata,
+    build_selected_prediction_frame,
     metrics,
     select_best_model,
     validate_input_schema,
@@ -98,14 +99,36 @@ def test_select_best_model_raises_when_only_baseline_exists():
 
 def test_build_run_metadata_contains_reproducibility_and_selected_metrics():
     results = pd.DataFrame(
-        {"Model": ["Ridge"], "R2": [0.25], "MAE": [70.0], "MSE": [5625.0], "RMSE": [75.0]}
+        {"Model": ["Ridge", "DummyMean"], "R2": [0.25, 0.0], "MAE": [70.0, 100.0], "MSE": [5625.0, 10000.0], "RMSE": [75.0, 100.0]}
     )
     metadata = build_run_metadata(results, "Ridge")
     assert metadata["target"] == "Purchase"
     assert metadata["selected_model"] == "Ridge"
+    assert metadata["candidate_models"] == ["Ridge", "DummyMean"]
+    assert metadata["baseline_model"] == "DummyMean"
     assert metadata["random_state"] == 42
     assert metadata["validation_size"] == 0.20
     assert metadata["selected_metrics"]["RMSE"] == 75.0
+
+
+def test_build_selected_prediction_frame_uses_selected_model():
+    predictions = pd.DataFrame(
+        {
+            "User_ID": [1, 2],
+            "Product_ID": ["P1", "P2"],
+            "Ridge": [123.0, 456.0],
+            "RandomForest": [120.0, 450.0],
+        }
+    )
+    selected = build_selected_prediction_frame(predictions, "Ridge")
+    assert selected.columns.tolist() == ["User_ID", "Product_ID", "SelectedPrediction"]
+    assert selected["SelectedPrediction"].tolist() == [123.0, 456.0]
+
+
+def test_build_selected_prediction_frame_rejects_unknown_model():
+    predictions = pd.DataFrame({"User_ID": [1], "Product_ID": ["P1"], "Ridge": [123.0]})
+    with pytest.raises(ValueError, match="missing from predictions"):
+        build_selected_prediction_frame(predictions, "RandomForest")
 
 
 def test_input_schema_accepts_required_columns():
