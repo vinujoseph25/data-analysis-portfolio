@@ -33,7 +33,7 @@ outputs/
 
 `model_comparison.csv` contains R², MAE, MSE and RMSE for the validation set, plus improvement metrics against the Dummy Regressor and a `Selected` flag for the best predictive model. The selection rule excludes `DummyMean` and chooses the lowest validation RMSE, using MAE and model name as deterministic tie-breakers.
 
-`model_predictions.csv` contains predictions from every fitted candidate model for the original test dataset. It also records the selected model name and the corresponding `SelectedPrediction` value on each row.
+`model_predictions.csv` contains predictions from every fitted candidate model for the original test dataset. It also records the selected model name and the corresponding `SelectedPrediction` value on each row. Before this file is written, the workflow validates that the row count and `User_ID`/`Product_ID` identifiers match the source test data, that one selected model is recorded consistently, and that selected predictions are numeric and finite.
 
 `selected_model_predictions.csv` is a compact downstream artifact containing only `User_ID`, `Product_ID`, and `SelectedPrediction`. It is generated through a dedicated helper so consumers do not need to know the internal name of the selected estimator.
 
@@ -49,9 +49,11 @@ The automated selection step also makes the workflow easier to extend. New candi
 
 Separating the selected prediction artifact from the full comparison output also creates a cleaner contract for downstream analytics, APIs or future deployment code. Consumers can use the stable `SelectedPrediction` field without depending on which model won a future run.
 
+The prediction validation layer adds an additional production-oriented safeguard: the exported predictions must remain aligned with the original test identifiers and row order. This reduces the risk of silently attaching a prediction to the wrong customer/product record during downstream processing.
+
 ## Quality checks
 
-The project includes unit tests covering preprocessing, mixed-feature model fitting, unseen categorical values, baseline benchmarking, schema validation, model selection, run metadata and the selected prediction output contract. GitHub Actions runs the test suite across supported Python versions. The tests verify the selection logic using small deterministic fixtures, while the full dataset remains reserved for the end-to-end modelling workflow.
+The project includes unit tests covering preprocessing, mixed-feature model fitting, unseen categorical values, baseline benchmarking, schema validation, model selection, run metadata and the selected prediction output contract. GitHub Actions runs the test suite across supported Python versions. The tests also cover prediction row-count alignment, identifier mismatches and non-finite selected predictions. The tests verify the selection logic using small deterministic fixtures, while the full dataset remains reserved for the end-to-end modelling workflow.
 
 ## Next analysis steps
 
