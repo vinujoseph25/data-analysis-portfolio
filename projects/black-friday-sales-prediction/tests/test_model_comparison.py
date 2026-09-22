@@ -20,6 +20,7 @@ from model_comparison import (  # noqa: E402
     metrics,
     select_best_model,
     validate_input_schema,
+    validate_prediction_output,
 )
 
 
@@ -129,6 +130,51 @@ def test_build_selected_prediction_frame_rejects_unknown_model():
     predictions = pd.DataFrame({"User_ID": [1], "Product_ID": ["P1"], "Ridge": [123.0]})
     with pytest.raises(ValueError, match="missing from predictions"):
         build_selected_prediction_frame(predictions, "RandomForest")
+
+
+def test_validate_prediction_output_accepts_matching_predictions():
+    test = pd.DataFrame({"User_ID": [1, 2], "Product_ID": ["P1", "P2"]})
+    predictions = test.copy()
+    predictions["Ridge"] = [123.0, 456.0]
+    predictions["SelectedModel"] = "Ridge"
+    predictions["SelectedPrediction"] = predictions["Ridge"]
+    validate_prediction_output(test, predictions, "Ridge")
+
+
+def test_validate_prediction_output_rejects_row_count_mismatch():
+    test = pd.DataFrame({"User_ID": [1, 2], "Product_ID": ["P1", "P2"]})
+    predictions = pd.DataFrame({
+        "User_ID": [1],
+        "Product_ID": ["P1"],
+        "SelectedModel": ["Ridge"],
+        "SelectedPrediction": [123.0],
+    })
+    with pytest.raises(ValueError, match="row count"):
+        validate_prediction_output(test, predictions, "Ridge")
+
+
+def test_validate_prediction_output_rejects_identifier_mismatch():
+    test = pd.DataFrame({"User_ID": [1, 2], "Product_ID": ["P1", "P2"]})
+    predictions = pd.DataFrame({
+        "User_ID": [1, 99],
+        "Product_ID": ["P1", "P99"],
+        "SelectedModel": ["Ridge", "Ridge"],
+        "SelectedPrediction": [123.0, 456.0],
+    })
+    with pytest.raises(ValueError, match="identifiers"):
+        validate_prediction_output(test, predictions, "Ridge")
+
+
+def test_validate_prediction_output_rejects_non_finite_predictions():
+    test = pd.DataFrame({"User_ID": [1], "Product_ID": ["P1"]})
+    predictions = pd.DataFrame({
+        "User_ID": [1],
+        "Product_ID": ["P1"],
+        "SelectedModel": ["Ridge"],
+        "SelectedPrediction": [np.nan],
+    })
+    with pytest.raises(ValueError, match="finite"):
+        validate_prediction_output(test, predictions, "Ridge")
 
 
 def test_input_schema_accepts_required_columns():
