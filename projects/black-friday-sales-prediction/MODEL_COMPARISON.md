@@ -55,6 +55,8 @@ The prediction validation layer adds an additional production-oriented safeguard
 
 The project includes unit tests covering preprocessing, mixed-feature model fitting, unseen categorical values, baseline benchmarking, schema validation, model selection, run metadata and the selected prediction output contract. GitHub Actions runs the test suite across supported Python versions. The tests also cover prediction row-count alignment, identifier mismatches and non-finite selected predictions. The tests verify the selection logic using small deterministic fixtures, while the full dataset remains reserved for the end-to-end modelling workflow.
 
+CI now also reports line coverage for the `src/` package on every test run. This makes untested production logic visible in the workflow logs without turning coverage into an artificial pass/fail target. Coverage can be used as evidence when deciding where additional tests provide the most value.
+
 ## Next analysis steps
 
 - Add repeated cross-validation for more stable model estimates.
